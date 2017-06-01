@@ -41,6 +41,7 @@ func TestParseLine_OK(t *testing.T) {
 		{"Unicode", "U1=\U0001F525", "U1", "\U0001F525"},
 		{"UnicodeQuoted", "U2= ' \U0001F525 ' ", "U2", " \U0001F525 "},
 		{"UnderscoreKey", "_=x' ' ", "_", "x "},
+		{"README.md", `SOME_KEY = normal unquoted \text 'plus single quoted\' "\"double quoted " # EOL`, "SOME_KEY", `normal unquoted \text plus single quoted\ "double quoted `},
 	}
 
 	for _, c := range cases {
