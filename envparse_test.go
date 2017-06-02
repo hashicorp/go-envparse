@@ -10,52 +10,6 @@ func TestParse_OK(t *testing.T) {
 }
 
 func TestParse_Err(t *testing.T) {
-	cases := []struct {
-		name string
-		ln   string
-
-		// Either exact err or partial error message should be set
-		err     error
-		partial string
-	}{
-		{"MissingEqual", "foo bar", ErrMissingSeparator, ""},
-		{"EmptyKey", "=bar", ErrEmptyKey, ""},
-		{"EqualOnly", "=", ErrEmptyKey, ""},
-		{"InvalidKey", "1abc=x", nil, "key"},
-		{"InvalidKey2", "@abc=x", nil, "key"},
-		{"InvalidKey3", "a b c=x", nil, "key"},
-		{"InvalidKey4", "a\nb=x", nil, "key"},
-		{"InvalidValue", "FOO=\x00", nil, "value"},
-		{"OpenDoubleQuote", `FOO=" bar`, ErrUnmatchedDouble, ""},
-		{"OpenSingleQuote", `FOO=' bar`, ErrUnmatchedSingle, ""},
-		{"UnmatchedMix", `FOO=ok '"ok"' \"not ok ''`, ErrUnmatchedDouble, ""},
-		{"UnmatchedMix2", `FOO=ok '"ok"' \"not ok '"'`, ErrUnmatchedSingle, ""},
-		{"InvalidEscape", `FOO="\a"`, nil, `"a"`},
-		{"IncompleteEscape", `FOO="\`, ErrIncompleteEscape, ""},
-		{"IncompleteHex", `FOO="\u12"`, ErrIncompleteHex, ""},
-		{"InvalidHex", `FOO="\uabcZ"`, nil, `"Z"`},
-		{"IncompleteSurrogatePair1", `FOO="abc \uD83D"`, ErrIncompleteSur, ""},
-		{"IncompleteSurrogatePair2", `FOO="abc \uD83D \uDE01"`, ErrIncompleteSur, ""},
-		{"IncompleteSurrogatePair3", `FOO="abc \uD83DDE01"`, ErrIncompleteSur, ""},
-		{"IncompleteSurrogatePair4", `FOO="abc \uD83D\uDE0"`, nil, `"\""`},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			k, v, err := parseLine([]byte(c.ln))
-			if err == nil {
-				t.Fatalf("err == nil; found: %s=%q", k, v)
-			}
-
-			if c.err != nil && c.err != err {
-				t.Errorf("expected err=%v but found %v", c.err, err)
-			}
-
-			if c.partial != "" && !strings.Contains(err.Error(), c.partial) {
-				t.Errorf("expected err to contain %q but found %v", c.partial, err)
-			}
-		})
-	}
 }
 
 func TestParseLine_OK(t *testing.T) {
@@ -121,6 +75,52 @@ func TestParseLine_OK(t *testing.T) {
 }
 
 func TestParseLine_Err(t *testing.T) {
+	cases := []struct {
+		name string
+		ln   string
+
+		// Either exact err or partial error message should be set
+		err     error
+		partial string
+	}{
+		{"MissingEqual", "foo bar", ErrMissingSeparator, ""},
+		{"EmptyKey", "=bar", ErrEmptyKey, ""},
+		{"EqualOnly", "=", ErrEmptyKey, ""},
+		{"InvalidKey", "1abc=x", nil, "key"},
+		{"InvalidKey2", "@abc=x", nil, "key"},
+		{"InvalidKey3", "a b c=x", nil, "key"},
+		{"InvalidKey4", "a\nb=x", nil, "key"},
+		{"InvalidValue", "FOO=\x00", nil, "value"},
+		{"OpenDoubleQuote", `FOO=" bar`, ErrUnmatchedDouble, ""},
+		{"OpenSingleQuote", `FOO=' bar`, ErrUnmatchedSingle, ""},
+		{"UnmatchedMix", `FOO=ok '"ok"' \"not ok ''`, ErrUnmatchedDouble, ""},
+		{"UnmatchedMix2", `FOO=ok '"ok"' \"not ok '"'`, ErrUnmatchedSingle, ""},
+		{"InvalidEscape", `FOO="\a"`, nil, `"a"`},
+		{"IncompleteEscape", `FOO="\`, ErrIncompleteEscape, ""},
+		{"IncompleteHex", `FOO="\u12"`, ErrIncompleteHex, ""},
+		{"InvalidHex", `FOO="\uabcZ"`, nil, `"Z"`},
+		{"IncompleteSurrogatePair1", `FOO="abc \uD83D"`, ErrIncompleteSur, ""},
+		{"IncompleteSurrogatePair2", `FOO="abc \uD83D \uDE01"`, ErrIncompleteSur, ""},
+		{"IncompleteSurrogatePair3", `FOO="abc \uD83DDE01"`, ErrIncompleteSur, ""},
+		{"IncompleteSurrogatePair4", `FOO="abc \uD83D\uDE0"`, nil, `"\""`},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			k, v, err := parseLine([]byte(c.ln))
+			if err == nil {
+				t.Fatalf("err == nil; found: %s=%q", k, v)
+			}
+
+			if c.err != nil && c.err != err {
+				t.Errorf("expected err=%v but found %v", c.err, err)
+			}
+
+			if c.partial != "" && !strings.Contains(err.Error(), c.partial) {
+				t.Errorf("expected err to contain %q but found %v", c.partial, err)
+			}
+		})
+	}
 }
 
 func BenchmarkParseLine_Simple(b *testing.B) {
