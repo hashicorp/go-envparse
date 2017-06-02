@@ -42,6 +42,7 @@ func TestParseLine_OK(t *testing.T) {
 		{"UnicodeLiteralQuoted", "U2= ' \U0001F525 ' ", "U2", " \U0001F525 "},
 		{"EscapedUnicode1byte", `U3="\u2318"`, "U3", "\U00002318"},
 		{"EscapedUnicode2byte", `U3="\uD83D\uDE01"`, "U3", "\U0001F601"},
+		{"README.mdEscapedUnicode", `FOO="The template value\nmay have included\nsome newlines!\n\ud83d\udd25"`, "FOO", "The template value\nmay have included\nsome newlines!\n🔥"},
 		{"UnderscoreKey", "_=x' ' ", "_", "x "},
 		{"README.md", `SOME_KEY = normal unquoted \text 'plus single quoted\' "\"double quoted " # EOL`, "SOME_KEY", `normal unquoted \text plus single quoted\ "double quoted `},
 		{"WindowsNewline", `w="\r\n"`, "w", "\r\n"},

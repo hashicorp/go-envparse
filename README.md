@@ -7,12 +7,32 @@ allocations, handle more complex quoting, and be better tested.
 
 Parsing a line does 2 allocations regardless of line length or complexity.
 
-The parser's behavior has two competing goals:
+The parser is just sophisticated enough to handle parsing any JSON strings
+properly to allow for cross-language/platform encoding of arbitrarily complex
+data.
 
-* Support a minimal number of features
-* Support arbitrarily complex combinations of the features it does have
+This is particularly useful if parsing environment variables from a templated
+file where the template needs a way to escape newlines, etc:
 
-For example the following common features *are intentionaly missing*:
+```
+FOO={{ some_template_function | toJSON }}
+```
+
+May enocde to something like:
+
+```
+FOO="The template value\nmay have included\nsome newlines!\n\ud83d\udd25"
+```
+
+Which `Parse()` would return as:
+
+```go
+map[string]string{
+	"FOO": "The template value\nmay have included\nsome newlines!\n🔥",
+}
+```
+
+The following common features *are intentionaly missing*:
 
 * Full shell escape sequence support
   * Only JSON escape sequences are supported (see below)
