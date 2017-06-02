@@ -1,4 +1,4 @@
-# envparse
+# go-envparse
 
 A minimal Go environment variable parser. It's intended to be used to parse
 `.env` style files similar to [godotenv](https://github.com/joho/godotenv) or
