@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/schmichael/go-envparse.svg?branch=master)](https://travis-ci.org/schmichael/go-envparse)
+[![Build status](https://ci.appveyor.com/api/projects/status/o6mdepblusp1g74d?svg=true)](https://ci.appveyor.com/project/schmichael/go-envparse)
 
 # go-envparse
 
