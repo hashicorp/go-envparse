@@ -24,6 +24,7 @@ install:
   - appveyor DownloadFile https://storage.googleapis.com/golang/go%GOVERSION%.windows-amd64.msi
   - msiexec /i go%GOVERSION%.windows-amd64.msi /q
   - set Path=c:\go\bin;c:\gopath\bin
+  - set CGO_ENABLED=0
   - go version
   - go env
 
@@ -31,4 +32,4 @@ build: false
 deploy: false
 
 test_script:
-  - CGO_ENABLED=0 go test -v -bench . -benchmem ./...
+  - go test -v -bench . -benchmem ./...
