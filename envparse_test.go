@@ -1,15 +1,66 @@
 package envparse
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 )
 
 func TestParse_OK(t *testing.T) {
+	buf := []byte(`# Start of file
 
+FIRST=key and value pair
+_=_   # ok
+_2=_2 # ok
+FIRST="overwrite # original"  #...
+`)
+	env, err := Parse(bytes.NewReader(buf))
+	if err != nil {
+		t.Fatalf("unexpected error: %v")
+	}
+	if len(env) != 3 {
+		t.Fatalf("expected 3 keys but found %d: %#v", len(env), env)
+	}
+	if expected := "overwrite # original"; env["FIRST"] != expected {
+		t.Errorf("expected FIRST=%q but found %q", expected, env["FIRST"])
+	}
+	if env["_"] != "_" {
+		t.Errorf("expected _=_ but found: %q", env["_"])
+	}
+	if env["_2"] != "_2" {
+		t.Errorf("expected _2=_2 but found: %q", env["_2"])
+	}
 }
 
 func TestParse_Err(t *testing.T) {
+	cases := []struct {
+		name string
+		buf  string
+		n    int
+		err  error
+	}{
+		{"MissingEqual", "FOO=bar\nx\nXYZ=1\n", 2, ErrMissingSeparator},
+		{"NewlineInDoubleQuote", "A=1\nB=\"foo\nbar\"\nC=3\n", 2, ErrUnmatchedDouble},
+		{"NewLineInSingleQuote", "A=2\nB='foo\nbar'\nC=3", 2, ErrUnmatchedSingle},
+		{"CheckLineCount", "\n\n\n\n\nA=1 # ok\n# ok\n\n\nU=\x00", 10, nil},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			env, err := Parse(bytes.NewReader([]byte(c.buf)))
+			if err == nil {
+				t.Fatalf("error=%v env=%#v", err, env)
+			}
+			perr := err.(*ParseError)
+			if c.n != perr.Line || (c.err != nil && c.err != perr.Err) {
+				t.Errorf("expected error [%v] on line (%d) but found error [%v] on line (%d)",
+					c.err, c.n, perr.Err, perr.Line)
+			}
+			if c.err == nil {
+				t.Logf("unchecked (expected) error: %v", err)
+			}
+		})
+	}
 }
 
 func TestParseLine_OK(t *testing.T) {
