@@ -1,7 +1,7 @@
 version: "{build}"
 
 # Source Config
-clone_folder: c:\gopath\src\github.com\schmichael\go-envparse
+clone_folder: c:\gopath\src\github.com\hashicorp\go-envparse
 
 # Build host
 
