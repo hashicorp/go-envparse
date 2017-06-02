@@ -42,7 +42,7 @@ func TestParse_Err(t *testing.T) {
 		{"MissingEqual", "FOO=bar\nx\nXYZ=1\n", 2, ErrMissingSeparator},
 		{"NewlineInDoubleQuote", "A=1\nB=\"foo\nbar\"\nC=3\n", 2, ErrUnmatchedDouble},
 		{"NewLineInSingleQuote", "A=2\nB='foo\nbar'\nC=3", 2, ErrUnmatchedSingle},
-		{"CheckLineCount", "\n\n\n\n\nA=1 # ok\n# ok\n\n\nU=\x00", 10, nil},
+		{"CheckLineCount", "\n\n\n\n\nA=1 # ok\n# ok\n\n\nU=\"\\\xFF\"", 10, ErrMultibyteEscape},
 	}
 
 	for _, c := range cases {
