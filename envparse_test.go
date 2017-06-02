@@ -16,7 +16,7 @@ FIRST="overwrite # original"  #...
 `)
 	env, err := Parse(bytes.NewReader(buf))
 	if err != nil {
-		t.Fatalf("unexpected error: %v")
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(env) != 3 {
 		t.Fatalf("expected 3 keys but found %d: %#v", len(env), env)

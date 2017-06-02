@@ -5,7 +5,7 @@
 //
 //	KEY=value
 //
-// While extraneous characters are discouraged, an "export" prefix, preceeding
+// While extraneous characters are discouraged, an "export" prefix, preceding
 // whitespace, and trailing whitespace are all removed:
 //
 //	KEY = This is ok! # Parses to {"KEY": "This is ok!"}
@@ -152,7 +152,7 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 	// Scratch buffer for unescaped value
 	newv := make([]byte, len(value))
 	newi := 0
-	// Track last significant character for trimming unquoted whitespace preceeding a trailing comment
+	// Track last significant character for trimming unquoted whitespace preceding a trailing comment
 	lastSig := 0
 
 	// Parser State
