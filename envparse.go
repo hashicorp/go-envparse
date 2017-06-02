@@ -19,6 +19,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"unicode/utf16"
+	"unicode/utf8"
 )
 
 // ParseError is returned whenever the Parse function encounters an error. It
@@ -71,6 +73,7 @@ const (
 	doubleQuote = iota
 	singleQuote = iota
 	escapeMode  = iota
+	unicodeMode = iota
 )
 
 var (
@@ -81,7 +84,9 @@ var (
 	ErrEmptyKey         = fmt.Errorf("empty key")
 	ErrUnmatchedDouble  = fmt.Errorf(`unmatched "`)
 	ErrUnmatchedSingle  = fmt.Errorf("unmatched '")
+	ErrIncompleteHex    = fmt.Errorf("incomplete hex sequence")
 	ErrIncompleteEscape = fmt.Errorf("incomplete escape sequence")
+	ErrIncompleteSur    = fmt.Errorf("incomplete Unicode surrogate pair")
 	ErrMultibyteEscape  = fmt.Errorf("multibyte characters disallowed in escape sequences")
 )
 
@@ -143,7 +148,9 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 	// Parser State
 	mode := normalMode
 
-	for _, v := range value {
+	for i := 0; i < len(value); i++ {
+		v := value[i]
+
 		// Control characters are always an error
 		if v < 32 {
 			return nil, nil, fmt.Errorf("0x%0.2x is an invalid value character", v)
@@ -202,13 +209,54 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 			// We're in double quotes and the last character was a backslash
 			switch v {
 			case '"':
-				newv[newi] = '"'
+				newv[newi] = v
 			case '\\':
-				newv[newi] = '\\'
+				newv[newi] = v
+			case '/':
+				newv[newi] = v
+			case 'b':
+				newv[newi] = '\b'
+			case 'f':
+				newv[newi] = '\f'
+			case 'r':
+				newv[newi] = '\r'
 			case 'n':
 				newv[newi] = '\n'
 			case 't':
 				newv[newi] = '\t'
+			case 'u':
+				// Parse-ahead to capture unicode
+				r, err := h2r(value[i+1:])
+				if err != nil {
+					return nil, nil, err
+				}
+
+				// Bump index by width of hex chars
+				i += 4
+
+				// Check if we need to get another rune
+				if utf16.IsSurrogate(r) {
+					if len(value) < i+6 {
+						//TODO Use replacement character instead?
+						return nil, nil, ErrIncompleteSur
+					}
+					if value[i+1] != '\\' || value[i+2] != 'u' {
+						//TODO Use replacement character instead?
+						return nil, nil, ErrIncompleteSur
+					}
+
+					r2, err := h2r(value[i+3:])
+					if err != nil {
+						return nil, nil, err
+					}
+
+					// Bump index by width of \uXXXX
+					i += 6
+
+					r = utf16.DecodeRune(r, r2)
+				}
+				n := utf8.EncodeRune(newv[newi:], r)
+				newi += n - 1 // because it's incremented outside the switch
 			default:
 				return nil, nil, fmt.Errorf("invalid escape sequence: %s", string(v))
 			}
@@ -250,4 +298,29 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 	default:
 		panic(fmt.Errorf("BUG: invalid mode: %v", mode))
 	}
+}
+
+// convert hex characters into a rune
+func h2r(buf []byte) (rune, error) {
+	if len(buf) < 4 {
+		return 0, ErrIncompleteHex
+	}
+	var r rune
+	for i := 0; i < 4; i++ {
+		d := buf[i]
+		switch {
+		case '0' <= d && d <= '9':
+			d = d - '0'
+		case 'a' <= d && d <= 'f':
+			d = d - 'a' + 10
+		case 'A' <= d && d <= 'F':
+			d = d - 'A' + 10
+		default:
+			return 0, fmt.Errorf("invalid hex character: %q", d)
+		}
+
+		r *= 16
+		r += rune(d)
+	}
+	return r, nil
 }

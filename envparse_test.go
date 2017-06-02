@@ -38,10 +38,13 @@ func TestParseLine_OK(t *testing.T) {
 		{"NormalSingleMix", "FOO=normal'single ' ", "FOO", "normalsingle "},
 		{"NormalDoubleMix", `FOO= "double\\" normal # "EOL"`, "FOO", "double\\ normal"},
 		{"AllModes", `export FOO =  'single\n' \\normal\t "double\"\n " # comment`, "FOO", "single\\n \\\\normal\\t double\"\n "},
-		{"Unicode", "U1=\U0001F525", "U1", "\U0001F525"},
-		{"UnicodeQuoted", "U2= ' \U0001F525 ' ", "U2", " \U0001F525 "},
+		{"UnicodeLiteral", "U1=\U0001F525", "U1", "\U0001F525"},
+		{"UnicodeLiteralQuoted", "U2= ' \U0001F525 ' ", "U2", " \U0001F525 "},
+		{"EscapedUnicode1byte", `U3="\u2318"`, "U3", "\U00002318"},
+		{"EscapedUnicode2byte", `U3="\uD83D\uDE01"`, "U3", "\U0001F601"},
 		{"UnderscoreKey", "_=x' ' ", "_", "x "},
 		{"README.md", `SOME_KEY = normal unquoted \text 'plus single quoted\' "\"double quoted " # EOL`, "SOME_KEY", `normal unquoted \text plus single quoted\ "double quoted `},
+		{"WindowsNewline", `w="\r\n"`, "w", "\r\n"},
 	}
 
 	for _, c := range cases {
@@ -54,7 +57,7 @@ func TestParseLine_OK(t *testing.T) {
 				t.Errorf("expected key %q but found %q", c.k, string(k))
 			}
 			if string(v) != c.v {
-				t.Errorf("expected value %q but found %q", c.v, string(v))
+				t.Errorf("expected value %q but found [%s] - %q", c.v, string(v), string(v))
 			}
 		})
 	}
@@ -81,7 +84,7 @@ func BenchmarkParseLine_Simple(b *testing.B) {
 }
 
 func BenchmarkParseLine_Complex(b *testing.B) {
-	line := []byte(`export FOO = bar"baz'\n'\t " ☃ '#\n\t'  # a really # long # comment!!!1111   `)
+	line := []byte(`export FOO = bar"baz'\n'\t " ☃ '#\n\t' "#\uD83D\ude01" # a really # long # comment!!!1111   `)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		k, v, err := parseLine(line)
@@ -91,7 +94,7 @@ func BenchmarkParseLine_Complex(b *testing.B) {
 		if len(k) != 3 {
 			b.Fatalf("unexpected key: %q (%d)", k, len(k))
 		}
-		if len(v) != 20 {
+		if len(v) != 27 {
 			b.Fatalf("unexpected value: %q (%d)", v, len(v))
 		}
 	}

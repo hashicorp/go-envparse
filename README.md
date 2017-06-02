@@ -14,7 +14,8 @@ The parser's behavior has two competing goals:
 
 For example the following common features *are intentionaly missing*:
 
-* Full escape sequence support (only `\n`, `\t`, `\\`, and `\"` are supported)
+* Full shell escape sequence support
+  * Only JSON escape sequences are supported (see below)
 * Variable interpolation
   * Use [Go's os.Expand](https://golang.org/pkg/os/#Expand) on the parsed value
 * Anything YAML related
@@ -38,3 +39,17 @@ SOME_KEY = normal unquoted \text 'plus single quoted\' "\"double quoted " # EOL
 * Values should be valid ASCII or UTF-8.
 * Newlines are always treated as delimiters so newlines within values *must* be
   escaped.
+* Values may use one of more quoting styles:
+  * Unquoted - `FOO=bar baz`
+    * No escape sequences
+    * Ends at `#`, `"`, `'`, or newline
+    * Preceeding and trailing whitespace will be stripped
+  * Double Quotes - `FOO="bar baz"`
+    * Supports JSON escape sequences: `\uXXXX`, `\r`, `\n`, `\t`, `\\`, and
+      `\"`
+    * Ends at unescaped `"`
+    * No whitespace trimming
+  * Single Quotes - `FOO='bar baz'`
+    * No escape sequences
+    * Ends at `'`
+    * No whitespace trimming
