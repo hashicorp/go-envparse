@@ -4,6 +4,8 @@ go:
   - 1.7.x
   - 1.8.x
   - master
+script: CGO_ENABLED=0 go test -v ./... -bench=. -benchmem
+sudo: false
 matrix:
   allow_failures:
     - go: master
