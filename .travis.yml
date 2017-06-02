@@ -4,7 +4,11 @@ go:
   - 1.7.x
   - 1.8.x
   - master
-script: CGO_ENABLED=0 go test -v ./... -bench=. -benchmem
+secure: "YGJOWRmmWXI1MfscYnqUNqv/9VbWU4BnZAFgV7mL/GkjwKGOeAGDSd3RUvzTTjqWUXUtsZV2XYcJgTGC8YEW0RGFPeK/Hiw6OhbnRCRVpYIsligf8stMft18Psvz3UAEGipgggVQroQ6CA4JlcU9mmtEqMf3Le1I126LrNZ9EARkZtdnIoBEc1zuMV0OupkdTu6vgPkNfBlO6Gns7ToIV8P+dT/OOk0Jn3/ez65sUIVhot7THZC/xYvvLWtOyc7SDxEWJLP0q9cCC08n6PCxBmLx3+PsBTPudPnQcmAkoky7vfgowM33yvJZUhuUElLnphQ0exbq8VTU4C1xBSH74J9+TU1VcqDOwIQVWdeWJkKc58EiVQw1+Cwbsv0tj/9hIlne+olKVyzl4lzvFIJljoknJzY8/w8V8TXqoY77K4rbGPk9041Y27wBmZDfx4TSigjXgzC6/VEHKxBJRvhXcc408KURbDlGH/2qxcHqlKD31atBANQHLZi0xGeyncZ0FddVEQsNqli8EUAKWWXjcmdQdLbX1OFmEtQDCqYfw/01PSZ5WowXauKaaxDuX+/dyBEA4yY7Fam1JIopK8rYD+Bzc+KtAhyFftlcvyugIKOqJETtsMDuaZlMJF49AhGQ+GB5Sk9Qbb6ciPuM3pU6LpqLvgtcqtxK1p0IiA3/pCg="
+install:
+  - go get github.com/mattn/goveralls
+script: CGO_ENABLED=0 go test -v ./... -bench=. -benchmem -covermode=atomic -coverprofile=coverage.out
+after_script: goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 sudo: false
 matrix:
   allow_failures:
