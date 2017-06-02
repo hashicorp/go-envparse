@@ -1,6 +1,5 @@
 // Package envparse is a minimal environment variable parser. It handles empty
-// lines, comments, single quotes, double quotes, and a few escape sequences
-// (\\, \", \n, \t).
+// lines, comments, single quotes, double quotes, and JSON escape sequences.
 //
 // Non-empty or comment lines should be of the form:
 //
@@ -21,6 +20,17 @@ import (
 	"io"
 	"unicode/utf16"
 	"unicode/utf8"
+)
+
+var (
+	ErrMissingSeparator = fmt.Errorf("missing =")
+	ErrEmptyKey         = fmt.Errorf("empty key")
+	ErrUnmatchedDouble  = fmt.Errorf(`unmatched "`)
+	ErrUnmatchedSingle  = fmt.Errorf("unmatched '")
+	ErrIncompleteEscape = fmt.Errorf("incomplete escape sequence")
+	ErrIncompleteHex    = fmt.Errorf("incomplete hex sequence")
+	ErrIncompleteSur    = fmt.Errorf("incomplete Unicode surrogate pair")
+	ErrMultibyteEscape  = fmt.Errorf("multibyte characters disallowed in escape sequences")
 )
 
 // ParseError is returned whenever the Parse function encounters an error. It
@@ -44,12 +54,16 @@ func parseError(line int, err error) error {
 	}
 }
 
-// Parse an io.Reader of environment variables into a map or return a
+// Parse environmnet variables from an io.Reader into a map or return a
 // ParseError.
 func Parse(r io.Reader) (map[string]string, error) {
 	env := make(map[string]string)
 	scanner := bufio.NewScanner(r)
+
+	// Track line number
 	i := 0
+
+	// Main scan loop
 	for scanner.Scan() {
 		i++
 		k, v, err := parseLine(scanner.Bytes())
@@ -77,25 +91,18 @@ const (
 )
 
 var (
+	empty        = []byte{}
 	separator    = []byte{'='}
 	exportPrefix = []byte("export ")
-
-	ErrMissingSeparator = fmt.Errorf("missing %q", separator)
-	ErrEmptyKey         = fmt.Errorf("empty key")
-	ErrUnmatchedDouble  = fmt.Errorf(`unmatched "`)
-	ErrUnmatchedSingle  = fmt.Errorf("unmatched '")
-	ErrIncompleteHex    = fmt.Errorf("incomplete hex sequence")
-	ErrIncompleteEscape = fmt.Errorf("incomplete escape sequence")
-	ErrIncompleteSur    = fmt.Errorf("incomplete Unicode surrogate pair")
-	ErrMultibyteEscape  = fmt.Errorf("multibyte characters disallowed in escape sequences")
 )
 
 // parseLine parses the given line into a key and value or error.
 //
 // Empty lines are returned as zero length slices
 func parseLine(ln []byte) ([]byte, []byte, error) {
-	if len(ln) == 0 {
-		return ln, ln, nil
+	ln = bytes.TrimSpace(ln)
+	if len(ln) == 0 || ln[0] == '#' {
+		return empty, empty, nil
 	}
 
 	parts := bytes.SplitN(ln, separator, 2)
@@ -107,8 +114,11 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 	key, value := bytes.TrimSpace(parts[0]), bytes.TrimSpace(parts[1])
 
 	// Ensure key is of the form [A-Za-z][A-Za-z0-9_]? with an optional
-	// leading 'export '
-	key = bytes.TrimPrefix(key, exportPrefix)
+	// leading 'export ', but only trim leading export if there's another
+	// key name.
+	if len(key) > len(exportPrefix) {
+		key = bytes.TrimPrefix(key, exportPrefix)
+	}
 	if len(key) == 0 {
 		return nil, nil, ErrEmptyKey
 	}
@@ -125,9 +135,9 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 	for _, v := range key[1:] {
 		switch {
 		case v == '_':
-		case v >= 'A' || v <= 'Z':
-		case v >= 'a' || v <= 'z':
-		case v >= '0' || v <= '9':
+		case v >= 'A' && v <= 'Z':
+		case v >= 'a' && v <= 'z':
+		case v >= '0' && v <= '9':
 		default:
 			return nil, nil, fmt.Errorf("key characters must be [A-Za-z0-9_] but found %q", v)
 		}
@@ -258,7 +268,7 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 				n := utf8.EncodeRune(newv[newi:], r)
 				newi += n - 1 // because it's incremented outside the switch
 			default:
-				return nil, nil, fmt.Errorf("invalid escape sequence: %s", string(v))
+				return nil, nil, fmt.Errorf("invalid escape sequence: %q", string(v))
 			}
 			// Add the character to the new value
 			newi++
@@ -316,7 +326,7 @@ func h2r(buf []byte) (rune, error) {
 		case 'A' <= d && d <= 'F':
 			d = d - 'A' + 10
 		default:
-			return 0, fmt.Errorf("invalid hex character: %q", d)
+			return 0, fmt.Errorf("invalid hex character: %q", string(d))
 		}
 
 		r *= 16
