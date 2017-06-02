@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/schmichael/go-envparse.svg?branch=master)](https://travis-ci.org/schmichael/go-envparse)
+
 # go-envparse
 
 A minimal Go environment variable parser. It's intended to be used to parse
