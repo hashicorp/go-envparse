@@ -136,11 +136,12 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 		switch {
 		case v == '_':
 		case v == '.':
+		case v == '/':
 		case v >= 'A' && v <= 'Z':
 		case v >= 'a' && v <= 'z':
 		case v >= '0' && v <= '9':
 		default:
-			return nil, nil, fmt.Errorf("key characters must be [A-Za-z0-9_.] but found %q", v)
+			return nil, nil, fmt.Errorf("key characters must be [A-Za-z0-9/_.] but found %q", v)
 		}
 	}
 

@@ -106,6 +106,7 @@ func TestParseLine_OK(t *testing.T) {
 		{"README.mdEscapedUnicode", `FOO="The template value\nmay have included\nsome newlines!\n\ud83d\udd25"`, "FOO", "The template value\nmay have included\nsome newlines!\n🔥"},
 		{"UnderscoreKey", "_=x' ' ", "_", "x "},
 		{"DottedKey", "FOO.BAR=x", "FOO.BAR", "x"},
+		{"FwdSlashedKey", "FOO/BAR=x", "FOO/BAR", "x"},
 		{"README.md", `SOME_KEY = normal unquoted \text 'plus single quoted\' "\"double quoted " # EOL`, "SOME_KEY", `normal unquoted \text plus single quoted\ "double quoted `},
 		{"WindowsNewline", `w="\r\n"`, "w", "\r\n"},
 	}
