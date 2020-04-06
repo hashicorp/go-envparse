@@ -37,7 +37,7 @@ map[string]string{
 
 ## Minimal
 
-The following common features *are intentionaly missing*:
+The following common features *are intentionally missing*:
 
 * Full shell quoting semantics
 * Full shell escape sequence support
