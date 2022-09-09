@@ -1,6 +1,5 @@
-[![GoDoc](https://godoc.org/github.com/hashicorp/go-envparse?status.svg)](https://godoc.org/github.com/hashicorp/go-envparse)
-[![Build Status](https://travis-ci.org/hashicorp/go-envparse.svg?branch=master)](https://travis-ci.org/hashicorp/go-envparse)
-[![Coverage Status](https://coveralls.io/repos/github/hashicorp/go-envparse/badge.svg?branch=master)](https://coveralls.io/github/hashicorp/go-envparse?branch=master)
+[![Run CI Tests](https://github.com/hashicorp/go-envparse/actions/workflows/ci.yaml/badge.svg)](https://github.com/hashicorp/go-envparse/actions/workflows/ci.yaml)
+[![Go Reference](https://pkg.go.dev/badge/pkg.go.dev/github.com/hashicorp/go-envparse.svg)](https://pkg.go.dev/pkg.go.dev/github.com/hashicorp/go-envparse)
 
 # go-envparse
 
