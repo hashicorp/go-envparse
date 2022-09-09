@@ -1,5 +1,5 @@
 [![Run CI Tests](https://github.com/hashicorp/go-envparse/actions/workflows/ci.yaml/badge.svg)](https://github.com/hashicorp/go-envparse/actions/workflows/ci.yaml)
-[![Go Reference](https://pkg.go.dev/badge/pkg.go.dev/github.com/hashicorp/go-envparse.svg)](https://pkg.go.dev/pkg.go.dev/github.com/hashicorp/go-envparse)
+[![Go Reference](https://pkg.go.dev/badge/github.com/hashicorp/go-envparse.svg)](https://pkg.go.dev/github.com/hashicorp/go-envparse)
 
 # go-envparse
 
