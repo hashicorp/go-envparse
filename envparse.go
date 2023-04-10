@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package envparse is a minimal environment variable parser. It handles empty
 // lines, comments, single quotes, double quotes, and JSON escape sequences.
 //
