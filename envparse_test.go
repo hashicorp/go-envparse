@@ -24,14 +24,14 @@ FIRST="overwrite # original"  #...
 	if len(env) != 3 {
 		t.Fatalf("expected 3 keys but found %d: %#v", len(env), env)
 	}
-	if expected := "overwrite # original"; env["FIRST"] != expected {
-		t.Errorf("expected FIRST=%q but found %q", expected, env["FIRST"])
+	if expected := "overwrite # original"; env.Get("FIRST") != expected {
+		t.Errorf("expected FIRST=%q but found %q", expected, env.Get("FIRST"))
 	}
-	if env["_"] != "_" {
-		t.Errorf("expected _=_ but found: %q", env["_"])
+	if env.Get("_") != "_" {
+		t.Errorf("expected _=_ but found: %q", env.Get("_"))
 	}
-	if env["_2"] != "_2" {
-		t.Errorf("expected _2=_2 but found: %q", env["_2"])
+	if env.Get("_2") != "_2" {
+		t.Errorf("expected _2=_2 but found: %q", env.Get("_2"))
 	}
 }
 

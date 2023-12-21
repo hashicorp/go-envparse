@@ -57,10 +57,39 @@ func parseError(line int, err error) error {
 	}
 }
 
+type Pair struct {
+	Key string
+	Val string
+}
+
+type Pairs []Pair
+
+// Get returns the value associated with the given key, or "" if none exists.
+func (p Pairs) Get(key string) string {
+	for _, v := range p {
+		if v.Key == key {
+			return v.Val
+		}
+	}
+	return ""
+}
+
+// Set sets the key to value. It replaces any existing values.
+func (p *Pairs) Set(key, val string) {
+	for i, v := range *p {
+		if v.Key == key {
+			(*p)[i].Val = val
+			return
+		}
+	}
+
+	*p = append(*p, Pair{key, val})
+}
+
 // Parse environment variables from an io.Reader into a map or return a
 // ParseError.
-func Parse(r io.Reader) (map[string]string, error) {
-	env := make(map[string]string)
+func Parse(r io.Reader) (Pairs, error) {
+	env := Pairs{}
 	scanner := bufio.NewScanner(r)
 
 	// Track line number
@@ -76,7 +105,7 @@ func Parse(r io.Reader) (map[string]string, error) {
 
 		// Skip blank lines
 		if len(k) > 0 {
-			env[string(k)] = string(v)
+			env.Set(string(k), string(v))
 		}
 	}
 	if err := scanner.Err(); err != nil {
