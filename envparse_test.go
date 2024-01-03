@@ -5,19 +5,78 @@ package envparse
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 )
 
+func TestParser(t *testing.T) {
+	buf := `# Start of file
+
+A=1
+B=2
+C=3
+A=4
+`
+
+	p := New(bytes.NewBufferString(buf))
+
+	kv, err := p.Next()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if exp := (Pair{"A", "1"}); kv != exp {
+		t.Fatalf("expected %v but found %v", exp, kv)
+	}
+
+	kv, err = p.Next()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if exp := (Pair{"B", "2"}); kv != exp {
+		t.Fatalf("expected %v but found %v", exp, kv)
+	}
+
+	kv, err = p.Next()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if exp := (Pair{"C", "3"}); kv != exp {
+		t.Fatalf("expected %v but found %v", exp, kv)
+	}
+
+	kv, err = p.Next()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if exp := (Pair{"A", "4"}); kv != exp {
+		t.Fatalf("expected %v but found %v", exp, kv)
+	}
+
+	kv, err = p.Next()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if exp := emptyPair; kv != exp {
+		t.Fatalf("expected %v but found %v", exp, kv)
+	}
+
+}
+
 func TestParse_OK(t *testing.T) {
-	buf := []byte(`# Start of file
+	buf := `# Start of file
 
 FIRST=key and value pair
 _=_   # ok
 _2=_2 # ok
 FIRST="overwrite # original"  #...
-`)
-	env, err := Parse(bytes.NewReader(buf))
+`
+	env, err := Parse(bytes.NewBufferString(buf))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -32,6 +91,62 @@ FIRST="overwrite # original"  #...
 	}
 	if env["_2"] != "_2" {
 		t.Errorf("expected _2=_2 but found: %q", env["_2"])
+	}
+}
+
+// TestParsePairs asserts that the order keys appear in is respected and
+// that repeated keys show up as their last value.
+func TestParsePairs(t *testing.T) {
+	buf := `# Start of file
+X=1
+a=xxx
+X=2
+b=xxx
+X=3
+`
+
+	env, err := ParsePairs(bytes.NewBufferString(buf))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(env) != 3 {
+		t.Fatalf("expected 3 keys but found %d: %#v", len(env), env)
+	}
+
+	if expected := (Pair{Key: "X", Val: "3"}); env[2] != expected {
+		t.Errorf("expected env[2]=%q but found %q", expected, env[2])
+	}
+}
+
+// TestParse_Err_Unwrap asserts that Parser errors are unwrappable.
+func TestParse_Err_Unwrap(t *testing.T) {
+	r := bytes.NewBufferString("x")
+	p := New(r)
+	kv, err := p.Next()
+	if kv != emptyPair {
+		t.Errorf("unexpected pair: %v", kv)
+	}
+
+	if kv.Val != "" {
+		t.Errorf("unexpected value: %q", kv.Val)
+	}
+
+	if err == nil {
+		t.Fatalf("expected an error")
+	}
+
+	perr, ok := err.(*ParseError)
+	if !ok {
+		t.Fatalf("expected a *envparse.ParseError but found %T", err)
+	}
+
+	if exp := 1; perr.Line != exp {
+		t.Errorf("expected error on line %d but found: %d", exp, perr.Line)
+	}
+
+	if exp := ErrMissingSeparator; errors.Unwrap(err) != exp {
+		t.Fatalf("expected %q but found %q", ErrMissingSeparator, err)
 	}
 }
 
@@ -211,4 +326,97 @@ func BenchmarkParseLine_Complex(b *testing.B) {
 			b.Fatalf("unexpected value: %q (%d)", v, len(v))
 		}
 	}
+}
+
+func littleEnv() ([]byte, int) {
+	buf := bytes.NewBufferString("# Start of file\n")
+
+	i := 0
+	for k := 'A'; k < 'Z'; k++ {
+		buf.WriteString(string(k) + "=xxx\n")
+		i++
+	}
+
+	return buf.Bytes(), i
+}
+
+func BenchmarkLittle(b *testing.B) {
+	buf, envLen := littleEnv()
+
+	b.ResetTimer()
+
+	b.Run("Parse", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			env, err := Parse(bytes.NewBuffer(buf))
+			if err != nil {
+				b.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(env) != envLen {
+				b.Fatalf("unexpected len: %d", len(env))
+			}
+		}
+	})
+
+	b.Run("ParsePairs", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			env, err := ParsePairs(bytes.NewBuffer(buf))
+			if err != nil {
+				b.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(env) != envLen {
+				b.Fatalf("unexpected len: %d", len(env))
+			}
+		}
+	})
+}
+
+func bigEnv() ([]byte, int) {
+	buf := bytes.NewBufferString("# Start of file\n")
+
+	i := 0
+	for rep := 1; rep < 100; rep++ {
+		for k := 'A'; k < 'Z'; k++ {
+			buf.Write(bytes.Repeat([]byte{byte(k)}, rep))
+			buf.WriteString("=xxx\n")
+			i++
+		}
+	}
+
+	return buf.Bytes(), i
+}
+
+func BenchmarkBig(b *testing.B) {
+	big := 1_000_000
+	buf, envLen := littleEnv()
+	buf = bytes.Repeat(buf, big)
+
+	b.ResetTimer()
+
+	b.Run("Parse", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			env, err := Parse(bytes.NewBuffer(buf))
+			if err != nil {
+				b.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(env) != envLen {
+				b.Fatalf("unexpected len: %d", len(env))
+			}
+		}
+	})
+
+	b.Run("ParsePairs", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			env, err := ParsePairs(bytes.NewBuffer(buf))
+			if err != nil {
+				b.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(env) != envLen {
+				b.Fatalf("unexpected len: %d", len(env))
+			}
+		}
+	})
 }
