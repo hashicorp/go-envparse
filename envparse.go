@@ -50,6 +50,10 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("error reading: %v", e.Err)
 }
 
+func (e *ParseError) Unwrap() error {
+	return e.Err
+}
+
 func parseError(line int, err error) error {
 	return &ParseError{
 		Line: line,
@@ -57,31 +61,101 @@ func parseError(line int, err error) error {
 	}
 }
 
+// Parser incrementally parses environment variables from an input.
+type Parser struct {
+	i int
+	s *bufio.Scanner
+}
+
+// New environment variable Parser from an input reader.
+func New(r io.Reader) *Parser {
+	return &Parser{
+		s: bufio.NewScanner(r),
+	}
+}
+
+// Next returns the next key and value from the reader. May return duplicates
+// if the same key occurs more than once in the input.
+//
+// An empty pair indicates end of input. Blank lines in the input are skipped.
+func (p *Parser) Next() (Pair, error) {
+	for p.s.Scan() {
+		p.i++
+		k, v, err := parseLine(p.s.Bytes())
+		if err != nil {
+			return emptyPair, parseError(p.i, err)
+		}
+
+		if len(v) > 0 {
+			return Pair{Key: string(k), Val: string(v)}, nil
+		}
+	}
+
+	if err := p.s.Err(); err != nil {
+		return emptyPair, parseError(p.i, err)
+	}
+
+	// EOF
+	return emptyPair, nil
+}
+
 // Parse environment variables from an io.Reader into a map or return a
 // ParseError.
 func Parse(r io.Reader) (map[string]string, error) {
 	env := make(map[string]string)
-	scanner := bufio.NewScanner(r)
+	parser := New(r)
 
-	// Track line number
-	i := 0
-
-	// Main scan loop
-	for scanner.Scan() {
-		i++
-		k, v, err := parseLine(scanner.Bytes())
+	for {
+		kv, err := parser.Next()
 		if err != nil {
-			return nil, parseError(i, err)
+			return nil, err
 		}
 
-		// Skip blank lines
-		if len(k) > 0 {
-			env[string(k)] = string(v)
+		if kv == emptyPair {
+			break
 		}
+
+		env[kv.Key] = kv.Val
 	}
-	if err := scanner.Err(); err != nil {
-		return nil, parseError(i, err)
+
+	return env, nil
+}
+
+// Pair represents a key/value pair.
+type Pair struct {
+	Key string
+	Val string
+}
+
+// ParsePairs parses environment variables from an io.Reader into a slice of
+// key/value pairs or returns a ParseError.
+//
+// Unlike calling Parser(r).Next() in a loop, this ParsePairs deduplicates
+// repeated keys and uses their last position and value.
+func ParsePairs(r io.Reader) ([]Pair, error) {
+	env := []Pair{}
+	parser := New(r)
+
+	for {
+		kv, err := parser.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		if kv == emptyPair {
+			break
+		}
+
+		for i, p := range env {
+			// Remove previous entry for this key
+			if p.Key == kv.Key {
+				env = append(env[:i], env[i+1:]...)
+				break
+			}
+		}
+		env = append(env, kv)
 	}
+
 	return env, nil
 }
 
@@ -94,6 +168,7 @@ const (
 )
 
 var (
+	emptyPair    = Pair{}
 	empty        = []byte{}
 	separator    = []byte{'='}
 	exportPrefix = []byte("export ")
