@@ -19,10 +19,17 @@ package envparse
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
+)
+
+const (
+	InvalidKeyPrefixMsg = "key must start with [A-Za-z_] but found %q"
+	InvalidKeyMsg       = "key characters must be [A-Za-z0-9/_.] but found %q"
 )
 
 var (
@@ -59,6 +66,8 @@ func parseError(line int, err error) error {
 
 // Parse environment variables from an io.Reader into a map or return a
 // ParseError.
+//
+// Parses with strict mode, ensuring file lines contain only key-value pairs.
 func Parse(r io.Reader) (map[string]string, error) {
 	env := make(map[string]string)
 	scanner := bufio.NewScanner(r)
@@ -82,6 +91,44 @@ func Parse(r io.Reader) (map[string]string, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, parseError(i, err)
 	}
+	return env, nil
+}
+
+func permittedError(err error) bool {
+	invalidKeyMsg := strings.TrimSuffix(InvalidKeyMsg, "%q")
+	return errors.Is(err, ErrMissingSeparator) || strings.HasPrefix(err.Error(), invalidKeyMsg)
+}
+
+// ParsePermissive parses environment variables from an io.Reader into a map or returns a
+// ParseError.
+//
+// Parses with permissive mode, skipping file lines that don't contains key-value pairs.
+func ParsePermissive(r io.Reader) (map[string]string, error) {
+	env := make(map[string]string)
+	scanner := bufio.NewScanner(r)
+
+	// Track line number
+	i := 0
+
+	// Main scan loop
+	for scanner.Scan() {
+		i++
+		k, v, err := parseLine(scanner.Bytes())
+		if err != nil && permittedError(err) {
+			continue
+		} else if err != nil {
+			return nil, parseError(i, err)
+		}
+
+		// Skip blank lines
+		if len(k) > 0 {
+			env[string(k)] = string(v)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, parseError(i, err)
+	}
+
 	return env, nil
 }
 
@@ -126,13 +173,13 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 		return nil, nil, ErrEmptyKey
 	}
 	if key[0] < 'A' {
-		return nil, nil, fmt.Errorf("key must start with [A-Za-z_] but found %q", key[0])
+		return nil, nil, fmt.Errorf(InvalidKeyPrefixMsg, key[0])
 	}
 	if key[0] > 'Z' && key[0] < 'a' && key[0] != '_' {
-		return nil, nil, fmt.Errorf("key must start with [A-Za-z_] but found %q", key[0])
+		return nil, nil, fmt.Errorf(InvalidKeyPrefixMsg, key[0])
 	}
 	if key[0] > 'z' {
-		return nil, nil, fmt.Errorf("key must start with [A-Za-z_] but found %q", key[0])
+		return nil, nil, fmt.Errorf(InvalidKeyPrefixMsg, key[0])
 	}
 
 	for _, v := range key[1:] {
@@ -144,7 +191,7 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 		case v >= 'a' && v <= 'z':
 		case v >= '0' && v <= '9':
 		default:
-			return nil, nil, fmt.Errorf("key characters must be [A-Za-z0-9/_.] but found %q", v)
+			return nil, nil, fmt.Errorf(InvalidKeyMsg, v)
 		}
 	}
 
