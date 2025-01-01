@@ -94,6 +94,7 @@ func Parse(r io.Reader) (map[string]string, error) {
 	return env, nil
 }
 
+// permittedError determines whether errors should be permitted by ParsePermissive
 func permittedError(err error) bool {
 	invalidKeyMsg := strings.TrimSuffix(InvalidKeyMsg, "%q")
 	return errors.Is(err, ErrMissingSeparator) || strings.HasPrefix(err.Error(), invalidKeyMsg)

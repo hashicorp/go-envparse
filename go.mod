@@ -1,3 +1,3 @@
-module github.com/hashicorp/go-envparse
+module github.com/acaloiaro/go-envparse
 
-go 1.13
+go 1.22
