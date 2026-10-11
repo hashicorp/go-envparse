@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2017, 2025
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 // Package envparse is a minimal environment variable parser. It handles empty
@@ -77,7 +77,8 @@ func New(r io.Reader) *Parser {
 // Next returns the next key and value from the reader. May return duplicates
 // if the same key occurs more than once in the input.
 //
-// An empty pair indicates end of input. Blank lines in the input are skipped.
+// An empty pair indicates end of input. Blank lines and comments are skipped.
+// A key with an empty value is returned. Callers tell the two apart by the key.
 func (p *Parser) Next() (Pair, error) {
 	for p.s.Scan() {
 		p.i++
@@ -86,9 +87,10 @@ func (p *Parser) Next() (Pair, error) {
 			return emptyPair, parseError(p.i, err)
 		}
 
-		if len(v) > 0 {
-			return Pair{Key: string(k), Val: string(v)}, nil
+		if len(k) == 0 {
+			continue
 		}
+		return Pair{Key: string(k), Val: string(v)}, nil
 	}
 
 	if err := p.s.Err(); err != nil {
