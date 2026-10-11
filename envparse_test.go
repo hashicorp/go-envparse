@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2017, 2025
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package envparse
@@ -66,6 +66,25 @@ A=4
 		t.Fatalf("expected %v but found %v", exp, kv)
 	}
 
+}
+
+func TestParse_emptyValue(t *testing.T) {
+	env, err := Parse(strings.NewReader("FOO=\nBAR=1\nBAZ=\"\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := env["FOO"]; !ok {
+		t.Fatal("FOO was dropped")
+	}
+	if env["FOO"] != "" {
+		t.Fatalf("FOO=%q", env["FOO"])
+	}
+	if env["BAR"] != "1" {
+		t.Fatalf("BAR=%q", env["BAR"])
+	}
+	if v, ok := env["BAZ"]; !ok || v != "" {
+		t.Fatalf("BAZ=%q present=%v", v, ok)
+	}
 }
 
 func TestParse_OK(t *testing.T) {
