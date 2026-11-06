@@ -67,7 +67,7 @@ the final `"` and `#` is trimmed.)
 
 ## Format
 
-* Keys should be of the form: `[A-Za-z_][A-Za-z0-9_]?`
+* Keys should be of the form: `[A-Za-z0-9_][A-Za-z0-9/_.]*`
   * Keys may be prefixed with `export ` which will be ignored
   * Whitespace around keys will be trimmed
 * Values should be valid ASCII or UTF-8 encoded.
