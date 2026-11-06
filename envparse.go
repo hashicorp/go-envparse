@@ -191,7 +191,7 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 	// Trim whitespace
 	key, value := bytes.TrimSpace(parts[0]), bytes.TrimSpace(parts[1])
 
-	// Ensure key is of the form [A-Za-z][A-Za-z0-9_]? with an optional
+	// Ensure key is of the form [A-Za-z0-9_][A-Za-z0-9/_.]* with an optional
 	// leading 'export ', but only trim leading export if there's another
 	// key name.
 	if len(key) > len(exportPrefix) {
@@ -200,14 +200,13 @@ func parseLine(ln []byte) ([]byte, []byte, error) {
 	if len(key) == 0 {
 		return nil, nil, ErrEmptyKey
 	}
-	if key[0] < 'A' {
-		return nil, nil, fmt.Errorf("key must start with [A-Za-z_] but found %q", key[0])
-	}
-	if key[0] > 'Z' && key[0] < 'a' && key[0] != '_' {
-		return nil, nil, fmt.Errorf("key must start with [A-Za-z_] but found %q", key[0])
-	}
-	if key[0] > 'z' {
-		return nil, nil, fmt.Errorf("key must start with [A-Za-z_] but found %q", key[0])
+	switch c := key[0]; {
+	case c == '_':
+	case c >= 'A' && c <= 'Z':
+	case c >= 'a' && c <= 'z':
+	case c >= '0' && c <= '9':
+	default:
+		return nil, nil, fmt.Errorf("key must start with [A-Za-z0-9_] but found %q", c)
 	}
 
 	for _, v := range key[1:] {
